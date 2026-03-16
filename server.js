@@ -3,8 +3,8 @@ const fetch = require("node-fetch");
 
 const app = express();
 
-const SUPABASE_URL = "https://TU_PROJECT_ID.supabase.co";
-const SUPABASE_KEY = "TU_SUPABASE_KEY";
+const SUPABASE_URL = "https://jbaaxihuboiedptfqgrg.supabase.co";
+const SUPABASE_KEY = "sb_publishable_UlmSgg73poiWmh87cquP-w_q-8T3a1T";
 
 app.get("/", (req, res) => {
     res.send("Servidor de propas activo 💸");
