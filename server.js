@@ -8,62 +8,48 @@ process.env.SUPABASE_URL,
 process.env.SUPABASE_KEY
 );
 
-app.get("/", (req, res) => {
-res.send("Servidor de propinas activo");
-});
-
 app.get("/propa", async (req, res) => {
 
 const action = req.query.action;
-const amount = parseInt(req.query.amount) || 1;
+const amount = parseInt(req.query.amount) || 0;
 
-let { data } = await supabase
-.from("propa")
+const { data } = await supabase
+.from("propas")
 .select("*")
 .eq("id",1)
 .single();
 
-let propas = data.propas;
+let total = data.propas;
 
 if(action === "add"){
-propas += amount;
+total += amount;
 
 await supabase
-.from("propa")
-.update({propas})
+.from("propas")
+.update({ propas: total })
 .eq("id",1);
-
-return res.send(`💸 Propinas totales: $${propas}`);
 }
 
 if(action === "sub"){
-propas = Math.max(0, propas - amount);
+total = Math.max(0, total - amount);
 
 await supabase
-.from("propa")
-.update({propas})
+.from("propas")
+.update({ propas: total })
 .eq("id",1);
-
-return res.send(`💸 Propinas totales: $${propas}`);
 }
 
 if(action === "reset"){
-propas = 0;
+total = 0;
 
 await supabase
-.from("propa")
-.update({propas})
+.from("propas")
+.update({ propas: 0 })
 .eq("id",1);
-
-return res.send(`🔄 Propinas reiniciadas`);
 }
 
-res.send(`💸 Propinas totales: $${propas}`);
+res.send(`💸 Propinas totales: $${total}`);
 
 });
 
-const PORT = process.env.PORT || 10000;
-
-app.listen(PORT, () => {
-console.log(`Servidor activo en puerto ${PORT}`);
-});
+app.listen(process.env.PORT || 10000);
