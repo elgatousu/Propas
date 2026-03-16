@@ -1,10 +1,9 @@
 {
-  "name": "propas-bot",
+  "name": "propas",
   "version": "1.0.0",
-  "description": "contador de propas",
   "main": "server.js",
   "dependencies": {
     "express": "^4.18.2",
-    "node-fetch": "^2.6.7"
+    "@supabase/supabase-js": "^2.39.0"
   }
 }
