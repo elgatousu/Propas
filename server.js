@@ -1,69 +1,69 @@
 const express = require("express");
-const fetch = require("node-fetch");
+const { createClient } = require("@supabase/supabase-js");
 
 const app = express();
 
-const SUPABASE_URL = "https://jbaaxihuboiedptfqgrg.supabase.co";
-const SUPABASE_KEY = "sb_publishable_UlmSgg73poiWmh87cquP-w_q-8T3a1T";
+const supabase = createClient(
+process.env.SUPABASE_URL,
+process.env.SUPABASE_KEY
+);
 
 app.get("/", (req, res) => {
-    res.send("Servidor de propinas activo 💸");
+res.send("Servidor de propinas activo");
 });
 
 app.get("/propa", async (req, res) => {
 
-    const action = req.query.action;
-    const amount = parseInt(req.query.amount) || 1;
+const action = req.query.action;
+const amount = parseInt(req.query.amount) || 1;
 
-    try {
+let { data } = await supabase
+.from("propa")
+.select("*")
+.eq("id",1)
+.single();
 
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/propa?id=eq.1`, {
-            headers: {
-                apikey: SUPABASE_KEY,
-                Authorization: `Bearer ${SUPABASE_KEY}`
-            }
-        });
+let propas = data.propas;
 
-        const data = await response.json();
-        let propas = data[0]?.propas || 0;
+if(action === "add"){
+propas += amount;
 
-        if (action === "add") {
-            propas += amount;
-        }
+await supabase
+.from("propa")
+.update({propas})
+.eq("id",1);
 
-        if (action === "sub") {
-            propas = Math.max(0, propas - amount);
-        }
+return res.send(`💸 Propinas totales: $${propas}`);
+}
 
-        if (action === "reset") {
-            propas = 0;
-        }
+if(action === "sub"){
+propas = Math.max(0, propas - amount);
 
-        // SOLO guardar si hay acción
-        if (action) {
-            await fetch(`${SUPABASE_URL}/rest/v1/propa?id=eq.1`, {
-                method: "PATCH",
-                headers: {
-                    "Content-Type": "application/json",
-                    apikey: SUPABASE_KEY,
-                    Authorization: `Bearer ${SUPABASE_KEY}`,
-                    Prefer: "return=minimal"
-                },
-                body: JSON.stringify({ propas })
-            });
-        }
+await supabase
+.from("propa")
+.update({propas})
+.eq("id",1);
 
-        res.send(`💸 Propinas totales: $${propas}`);
+return res.send(`💸 Propinas totales: $${propas}`);
+}
 
-    } catch (error) {
-        console.log(error);
-        res.send("Error en el servidor");
-    }
+if(action === "reset"){
+propas = 0;
+
+await supabase
+.from("propa")
+.update({propas})
+.eq("id",1);
+
+return res.send(`🔄 Propinas reiniciadas`);
+}
+
+res.send(`💸 Propinas totales: $${propas}`);
 
 });
 
 const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => {
-    console.log(`Servidor activo en puerto ${PORT}`);
+console.log(`Servidor activo en puerto ${PORT}`);
 });
