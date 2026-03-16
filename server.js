@@ -4,9 +4,9 @@ const fetch = require("node-fetch");
 const app = express();
 
 const SUPABASE_URL = "https://jbaaxihuboiedptfqgrg.supabase.co";
-const SUPABASE_KEY = "sb_publishable_Yu30CA4em3Adad3gkpA_Nw_-aYmjo4B";
+const SUPABASE_KEY = "sb_publishable_UlmSgg73poiWmh87cquP-w_q-8T3a1T";
 
-async function getPedidos() {
+async function getData() {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/contador?id=eq.1`, {
         headers: {
             apikey: SUPABASE_KEY,
@@ -15,10 +15,10 @@ async function getPedidos() {
     });
 
     const data = await res.json();
-    return data[0].pedidos;
+    return data[0];
 }
 
-async function setPedidos(valor) {
+async function updateData(datos) {
     await fetch(`${SUPABASE_URL}/rest/v1/contador?id=eq.1`, {
         method: "PATCH",
         headers: {
@@ -26,38 +26,50 @@ async function setPedidos(valor) {
             Authorization: `Bearer ${SUPABASE_KEY}`,
             "Content-Type": "application/json"
         },
-        body: JSON.stringify({ pedidos: valor })
+        body: JSON.stringify(datos)
     });
 }
 
 app.get("/", (req, res) => {
-    res.send("Servidor de pedidos activo");
+    res.send("Servidor de propas activo");
 });
 
-app.get("/pedido", async (req, res) => {
+app.get("/propa", async (req, res) => {
 
     const action = req.query.action;
-    let pedidos = await getPedidos();
+    const amount = parseInt(req.query.amount) || 0;
+
+    let data = await getData();
+    let propas = data.propas;
 
     if (action === "add") {
-        pedidos++;
-        await setPedidos(pedidos);
-        return res.send(`📦 Pedido recibido | Total: ${pedidos}`);
+
+        propas += amount;
+
+        await updateData({ propas });
+
+        return res.send(`💸 Propa de $${amount} | Total: $${propas}`);
     }
 
     if (action === "sub") {
-        pedidos = Math.max(0, pedidos - 1);
-        await setPedidos(pedidos);
-        return res.send(`❌ Pedido cancelado | Total: ${pedidos}`);
+
+        propas = Math.max(0, propas - amount);
+
+        await updateData({ propas });
+
+        return res.send(`❌ Se quitó $${amount} | Total: $${propas}`);
     }
 
     if (action === "reset") {
-        pedidos = 0;
-        await setPedidos(pedidos);
-        return res.send(`🔄 Contador reiniciado | Total: ${pedidos}`);
+
+        propas = 0;
+
+        await updateData({ propas });
+
+        return res.send(`🔄 Propas reiniciadas | Total: $${propas}`);
     }
 
-    res.send(`📦 Total pedidos: ${pedidos}`);
+    res.send(`💸 Total propas: $${propas}`);
 });
 
 const PORT = process.env.PORT || 3000;
