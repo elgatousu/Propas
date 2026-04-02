@@ -10,6 +10,8 @@ app.get("/propa", async (req, res) => {
         const action = req.query.action;
         const amount = parseInt(req.query.amount) || 0;
 
+        console.log("Fetching Supabase...");
+
         const response = await fetch(`${SUPABASE_URL}/rest/v1/propa?id=eq.1`, {
             headers: {
                 apikey: SUPABASE_KEY,
@@ -18,8 +20,15 @@ app.get("/propa", async (req, res) => {
         });
 
         const data = await response.json();
+        console.log("Respuesta:", data);
 
-        let total = data[0]?.propas || 0;
+        let total = 0;
+
+        if (Array.isArray(data) && data.length > 0) {
+            total = data[0].propas || 0;
+        } else {
+            console.log("Supabase devolvió vacío o error");
+        }
 
         if (action === "add") {
             total += amount;
@@ -47,7 +56,7 @@ app.get("/propa", async (req, res) => {
 
         res.send(`💸 Propinas totales: $${total}`);
     } catch (err) {
-        console.log(err);
+        console.log("ERROR REAL:", err);
         res.send("Error en el servidor");
     }
 });
