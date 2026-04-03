@@ -11,7 +11,7 @@ const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
 // 🔥 obtener pedidos
 async function getPedidos() {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/contador?id=eq.1`, {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/propas?id=eq.1`, {
         headers: {
             apikey: SUPABASE_KEY,
             Authorization: `Bearer ${SUPABASE_KEY}`
@@ -28,7 +28,7 @@ async function getPedidos() {
 
 // 🔥 actualizar pedidos
 async function setPedidos(valor) {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/contador?id=eq.1`, {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/propas?id=eq.1`, {
         method: "PATCH",
         headers: {
             apikey: SUPABASE_KEY,
