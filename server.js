@@ -1,6 +1,24 @@
-// PROPINAS
+const express = require("express");
+const fetch = require("node-fetch");
+require("dotenv").config();
 
+const app = express();
+
+// 🔐 variables
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_KEY;
 const SECRET = process.env.SECRET_KEY;
+
+// 🧠 evitar crash si faltan variables
+if (!SUPABASE_URL || !SUPABASE_KEY || !SECRET) {
+    console.error("❌ Faltan variables de entorno");
+    process.exit(1);
+}
+
+// 🟢 ruta base
+app.get("/", (req, res) => {
+    res.send("API de propinas funcionando 🚀");
+});
 
 // 🔥 obtener propinas
 async function getPropas() {
@@ -11,7 +29,10 @@ async function getPropas() {
         }
     });
 
-    if (!res.ok) throw new Error("Error GET propas");
+    if (!res.ok) {
+        const txt = await res.text();
+        throw new Error("GET error: " + txt);
+    }
 
     const data = await res.json();
     return data?.[0]?.propas || 0;
@@ -32,27 +53,25 @@ async function setPropas(valor) {
 
     if (!res.ok) {
         const txt = await res.text();
-        throw new Error("Error PATCH: " + txt);
+        throw new Error("PATCH error: " + txt);
     }
 }
 
-
-// 🟢 VER PROPINAS (público)
+// 🟢 ver propinas (público)
 app.get("/propa", async (req, res) => {
     try {
         const total = await getPropas();
         res.send(`💸 Propinas totales: $${total}`);
     } catch (err) {
-        console.error("ERROR:", err);
+        console.error("ERROR:", err.message);
         res.status(500).send("Error en propinas 💀");
     }
 });
 
-
-// 🔐 ADMIN (modificar)
+// 🔐 admin (modificar)
 app.get("/propa/admin", async (req, res) => {
     try {
-        const key = req.query.key; // para Nightbot
+        const key = req.query.key;
         const action = req.query.action;
         const amount = parseInt(req.query.amount);
 
@@ -63,7 +82,7 @@ app.get("/propa/admin", async (req, res) => {
 
         let total = await getPropas();
 
-        // ➕ SUMAR
+        // ➕ sumar
         if (action === "add") {
             if (!amount || amount <= 0) {
                 return res.send("❌ amount inválido");
@@ -75,7 +94,7 @@ app.get("/propa/admin", async (req, res) => {
             return res.send(`💸 +$${amount} | Total: $${total}`);
         }
 
-        // ➖ RESTAR
+        // ➖ restar
         if (action === "sub") {
             if (!amount || amount <= 0) {
                 return res.send("❌ amount inválido");
@@ -87,18 +106,25 @@ app.get("/propa/admin", async (req, res) => {
             return res.send(`💸 -$${amount} | Total: $${total}`);
         }
 
-        // 🔄 RESET
+        // 🔄 reset
         if (action === "reset") {
             total = 0;
             await setPropas(total);
 
-            return res.send(`🗑️ Propinas reiniciadas`);
+            return res.send("🗑️ Propinas reiniciadas");
         }
 
         return res.send("Acción no válida");
 
     } catch (err) {
-        console.error("ERROR:", err);
+        console.error("ERROR:", err.message);
         res.status(500).send("Error en propinas 💀");
     }
+});
+
+// 🚀 levantar servidor (IMPORTANTE para Render)
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+    console.log(`Servidor corriendo en puerto ${PORT}`);
 });
