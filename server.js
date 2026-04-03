@@ -1,79 +1,90 @@
-const SECRET = process.env.SECRET_KEY;
-
-app.get("/pedido/admin", async (req, res) => {
-    const key = req.query.key;
-
-    if (key !== SECRET) {
-        return res.status(403).send("No autorizado");
-    }
-
-    res.send("OK");
-});
-
 const express = require("express");
 const fetch = require("node-fetch");
+require("dotenv").config();
 
 const app = express();
 
-const SUPABASE_URL = "https://gfjxahvhvdgqpcflrwvz.supabase.co";
-const SUPABASE_KEY = "sb_publishable_UlmSgg73poiWmh87cquP-w_q-8T3a1T";
+// 🔐 variables de entorno
+const SECRET = process.env.SECRET_KEY;
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
-app.get("/propa", async (req, res) => {
-  try {
-    const action = req.query.action;
-    const amount = Number(req.query.amount) || 0;
-
-    console.log("ACTION:", action, "AMOUNT:", amount);
-
-    // GET actual
-    const getRes = await fetch(`${SUPABASE_URL}/rest/v1/propas?id=eq.1`, {
-      headers: {
-        apikey: SUPABASE_KEY,
-        Authorization: `Bearer ${SUPABASE_KEY}`
-      }
+// 🔥 obtener pedidos
+async function getPedidos() {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/contador?id=eq.1`, {
+        headers: {
+            apikey: SUPABASE_KEY,
+            Authorization: `Bearer ${SUPABASE_KEY}`
+        }
     });
 
-    const data = await getRes.json();
-    let total = data?.[0]?.propas || 0;
-
-    // lógica segura
-    if (action === "add") {
-      total += amount;
-      if (total < 0) total = 0;
+    if (!res.ok) {
+        throw new Error("Error GET pedidos");
     }
 
-    if (action === "sub") {
-      total = Math.max(0, total - amount);
-    }
+    const data = await res.json();
+    return data?.[0]?.pedidos || 0;
+}
 
-    if (action === "reset") {
-      total = 0;
-    }
-
-    // PATCH seguro
-    if (action) {
-      const updateRes = await fetch(`${SUPABASE_URL}/rest/v1/propas?id=eq.1`, {
+// 🔥 actualizar pedidos
+async function setPedidos(valor) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/contador?id=eq.1`, {
         method: "PATCH",
         headers: {
-          "Content-Type": "application/json",
-          apikey: SUPABASE_KEY,
-          Authorization: `Bearer ${SUPABASE_KEY}`,
-          Prefer: "return=minimal"
+            apikey: SUPABASE_KEY,
+            Authorization: `Bearer ${SUPABASE_KEY}`,
+            "Content-Type": "application/json",
+            Prefer: "return=minimal"
         },
-        body: JSON.stringify({ propas: total })
-      });
+        body: JSON.stringify({ pedidos: valor })
+    });
 
-      if (!updateRes.ok) {
-        throw new Error("Error al actualizar en Supabase");
-      }
+    if (!res.ok) {
+        const txt = await res.text();
+        throw new Error("Error PATCH: " + txt);
     }
+}
 
-    res.send(`💸 Propinas totales: $${total}`);
-
-  } catch (err) {
-    console.error("ERROR:", err);
-    res.status(500).send("Error en el servidor 💀");
-  }
+// 🟢 ruta pública (solo ver)
+app.get("/pedido", async (req, res) => {
+    try {
+        const pedidos = await getPedidos();
+        res.send(`📦 Total pedidos: ${pedidos}`);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Error 💀");
+    }
 });
 
-app.listen(process.env.PORT || 10000);
+// 🔐 ruta protegida (modificar)
+app.get("/pedido/admin", async (req, res) => {
+    try {
+        const key = req.headers["x-api-key"];
+
+        if (!key || key !== SECRET) {
+            return res.status(403).send("No autorizado");
+        }
+
+        const action = req.query.action;
+        let pedidos = await getPedidos();
+
+        if (action === "add") pedidos++;
+        if (action === "sub") pedidos = Math.max(0, pedidos - 1);
+        if (action === "reset") pedidos = 0;
+
+        await setPedidos(pedidos);
+
+        console.log("KEY usada:", key, "ACTION:", action);
+
+        res.send(`📦 Total: ${pedidos}`);
+    } catch (err) {
+        console.error("ERROR:", err);
+        res.status(500).send("Error 💀");
+    }
+});
+
+// 🔥 servidor
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log("Servidor corriendo en puerto", PORT);
+});
