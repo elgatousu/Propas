@@ -1,3 +1,15 @@
+const SECRET = process.env.SECRET_KEY;
+
+app.get("/pedido/admin", async (req, res) => {
+    const key = req.query.key;
+
+    if (key !== SECRET) {
+        return res.status(403).send("No autorizado");
+    }
+
+    res.send("OK");
+});
+
 const express = require("express");
 const fetch = require("node-fetch");
 
