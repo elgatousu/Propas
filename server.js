@@ -1,16 +1,9 @@
-const express = require("express");
-const fetch = require("node-fetch");
-require("dotenv").config();
+// PROPINAS
 
-const app = express();
-
-// 🔐 variables de entorno
 const SECRET = process.env.SECRET_KEY;
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
-// 🔥 obtener pedidos
-async function getPedidos() {
+// 🔥 obtener propinas
+async function getPropas() {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/propas?id=eq.1`, {
         headers: {
             apikey: SUPABASE_KEY,
@@ -18,16 +11,14 @@ async function getPedidos() {
         }
     });
 
-    if (!res.ok) {
-        throw new Error("Error GET pedidos");
-    }
+    if (!res.ok) throw new Error("Error GET propas");
 
     const data = await res.json();
-    return data?.[0]?.pedidos || 0;
+    return data?.[0]?.propas || 0;
 }
 
-// 🔥 actualizar pedidos
-async function setPedidos(valor) {
+// 🔥 actualizar propinas
+async function setPropas(valor) {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/propas?id=eq.1`, {
         method: "PATCH",
         headers: {
@@ -36,7 +27,7 @@ async function setPedidos(valor) {
             "Content-Type": "application/json",
             Prefer: "return=minimal"
         },
-        body: JSON.stringify({ pedidos: valor })
+        body: JSON.stringify({ propas: valor })
     });
 
     if (!res.ok) {
@@ -45,46 +36,69 @@ async function setPedidos(valor) {
     }
 }
 
-// 🟢 ruta pública (solo ver)
-app.get("/pedido", async (req, res) => {
+
+// 🟢 VER PROPINAS (público)
+app.get("/propa", async (req, res) => {
     try {
-        const pedidos = await getPedidos();
-        res.send(`📦 Total pedidos: ${pedidos}`);
+        const total = await getPropas();
+        res.send(`💸 Propinas totales: $${total}`);
     } catch (err) {
-        console.error(err);
-        res.status(500).send("Error 💀");
+        console.error("ERROR:", err);
+        res.status(500).send("Error en propinas 💀");
     }
 });
 
-// 🔐 ruta protegida (modificar)
-app.get("/pedido/admin", async (req, res) => {
-    try {
-        const key = req.headers["x-api-key"];
 
+// 🔐 ADMIN (modificar)
+app.get("/propa/admin", async (req, res) => {
+    try {
+        const key = req.query.key; // para Nightbot
+        const action = req.query.action;
+        const amount = parseInt(req.query.amount);
+
+        // 🔐 protección
         if (!key || key !== SECRET) {
             return res.status(403).send("No autorizado");
         }
 
-        const action = req.query.action;
-        let pedidos = await getPedidos();
+        let total = await getPropas();
 
-        if (action === "add") pedidos++;
-        if (action === "sub") pedidos = Math.max(0, pedidos - 1);
-        if (action === "reset") pedidos = 0;
+        // ➕ SUMAR
+        if (action === "add") {
+            if (!amount || amount <= 0) {
+                return res.send("❌ amount inválido");
+            }
 
-        await setPedidos(pedidos);
+            total += amount;
+            await setPropas(total);
 
-        console.log("KEY usada:", key, "ACTION:", action);
+            return res.send(`💸 +$${amount} | Total: $${total}`);
+        }
 
-        res.send(`📦 Total: ${pedidos}`);
+        // ➖ RESTAR
+        if (action === "sub") {
+            if (!amount || amount <= 0) {
+                return res.send("❌ amount inválido");
+            }
+
+            total = Math.max(0, total - amount);
+            await setPropas(total);
+
+            return res.send(`💸 -$${amount} | Total: $${total}`);
+        }
+
+        // 🔄 RESET
+        if (action === "reset") {
+            total = 0;
+            await setPropas(total);
+
+            return res.send(`🗑️ Propinas reiniciadas`);
+        }
+
+        return res.send("Acción no válida");
+
     } catch (err) {
         console.error("ERROR:", err);
-        res.status(500).send("Error 💀");
+        res.status(500).send("Error en propinas 💀");
     }
-});
-
-// 🔥 servidor
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log("Servidor corriendo en puerto", PORT);
 });
